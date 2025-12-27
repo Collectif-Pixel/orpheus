@@ -1,9 +1,9 @@
 import { defineCommand } from "citty";
 import { spawn, $ } from "bun";
-import consola from "consola";
 import { startServer } from "../../server";
 import { loadConfig, ensureConfigDir } from "../../core/config";
 import { isDaemonRunning, writePid, getLogFilePath } from "../../core/daemon";
+import { ui } from "../ui";
 
 export const startCommand = defineCommand({
   meta: {
@@ -29,20 +29,20 @@ export const startCommand = defineCommand({
 
     const { running, pid: existingPid } = isDaemonRunning();
     if (running) {
-      consola.warn(`Orpheus is already running (PID: ${existingPid})`);
-      consola.info(`Use 'orpheus stop' to stop it first`);
+      ui.log.warning(`Orpheus already running ${ui.dim(`(PID: ${existingPid})`)}`);
+      ui.log.info("Use 'orpheus stop' to stop it first");
       return;
     }
 
     if (args.foreground) {
-      consola.start("Starting Orpheus in foreground mode...");
+      ui.spinner("Starting Orpheus...");
       try {
         await startServer(port);
       } catch (error) {
         handleStartError(error, port);
       }
     } else {
-      consola.start("Starting Orpheus daemon...");
+      ui.spinner("Starting Orpheus daemon...");
 
       try {
         ensureConfigDir();
@@ -59,16 +59,18 @@ export const startCommand = defineCommand({
         await new Promise((resolve) => setTimeout(resolve, 800));
 
         if (child.exitCode !== null) {
-          consola.error("Failed to start daemon");
+          ui.log.error("Failed to start daemon");
           process.exit(1);
         }
 
         writePid(child.pid);
         child.unref();
 
-        consola.success(`Orpheus started (PID: ${child.pid})`);
-        consola.info(`Server running at http://localhost:${port}`);
-        consola.info(`Logs: ${logPath}`);
+        ui.br();
+        ui.log.success(`Orpheus started ${ui.dim(`(PID: ${child.pid})`)}`);
+        ui.log.info(`Server ${ui.primary(`http://localhost:${port}`)}`);
+        ui.log.info(`Logs ${ui.dim(logPath)}`);
+        ui.br();
       } catch (error) {
         handleStartError(error, port);
       }
@@ -78,13 +80,13 @@ export const startCommand = defineCommand({
 
 function handleStartError(error: unknown, port: number): void {
   if ((error as NodeJS.ErrnoException).code === "EADDRINUSE") {
-    consola.error(`Port ${port} is already in use`);
+    ui.log.error(`Port ${port} is already in use`);
     process.exit(1);
   }
 
   if ((error as Error).message?.includes("media-control")) {
-    consola.error("media-control not found. Install it with:");
-    consola.info("  brew install media-control");
+    ui.log.error("media-control not found");
+    ui.log.info("Install with: brew install media-control");
     process.exit(1);
   }
 

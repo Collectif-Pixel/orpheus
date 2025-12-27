@@ -1,8 +1,8 @@
 import { defineCommand } from "citty";
-import consola from "consola";
 import { existsSync } from "fs";
 import { join } from "path";
 import { getThemesDir, loadConfig, saveConfig } from "../../core/config";
+import { ui } from "../ui";
 
 export const useCommand = defineCommand({
   meta: {
@@ -23,27 +23,26 @@ export const useCommand = defineCommand({
     if (themeName === "default") {
       config.currentTheme = "default";
       saveConfig(config);
-      consola.success("Switched to default theme");
+      ui.log.success(`Theme ${ui.primary("default")}`);
       return;
     }
 
     if (!themeName.startsWith("@") || !themeName.includes("/")) {
-      consola.error("Invalid theme name. Use format: @user/theme-name");
-      consola.info("Or use 'default' for the built-in theme");
+      ui.log.error("Invalid format. Use: @user/theme-name");
+      ui.log.info("Or use 'default' for the built-in theme");
       process.exit(1);
     }
 
     const themeHtml = join(getThemesDir(), themeName, "theme.html");
     if (!existsSync(themeHtml)) {
-      consola.error(`Theme ${themeName} not found`);
-      consola.info("Install it with: orpheus add " + themeName);
+      ui.log.error(`Theme ${themeName} not found`);
+      ui.log.info(`Install with: orpheus add ${themeName}`);
       process.exit(1);
     }
 
     config.currentTheme = themeName;
     saveConfig(config);
 
-    consola.success(`Switched to theme: ${themeName}`);
-    consola.info("Restart Orpheus for changes to take effect");
+    ui.log.success(`Theme ${ui.primary(themeName)}`);
   },
 });

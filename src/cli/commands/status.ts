@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
-import consola from "consola";
 import { isDaemonRunning, getLogFilePath } from "../../core/daemon";
 import { loadConfig } from "../../core/config";
+import { ui } from "../ui";
 
 export const statusCommand = defineCommand({
   meta: {
@@ -12,13 +12,12 @@ export const statusCommand = defineCommand({
     const { running, pid } = isDaemonRunning();
     const config = loadConfig();
 
-    if (running) {
-      consola.success(`Orpheus is running (PID: ${pid})`);
-      consola.info(`Server: http://localhost:${config.port}`);
-      consola.info(`Theme: ${config.currentTheme}`);
-      consola.info(`Logs: ${getLogFilePath()}`);
-    } else {
-      consola.info("Orpheus is not running");
-    }
+    ui.serverStatus({
+      running,
+      pid,
+      port: config.port,
+      theme: config.currentTheme,
+      logs: getLogFilePath(),
+    });
   },
 });

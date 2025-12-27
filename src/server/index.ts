@@ -35,7 +35,7 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (path === "/api/health") {
-    return Response.json({ status: "ok", version: "0.1.0" }, { headers: corsHeaders() });
+    return Response.json({ status: "ok", version: "0.1.3" }, { headers: corsHeaders() });
   }
 
   if (path === "/api/now-playing") {

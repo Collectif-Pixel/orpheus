@@ -1,6 +1,6 @@
 import { defineCommand } from "citty";
-import consola from "consola";
 import { stopDaemon, isDaemonRunning } from "../../core/daemon";
+import { ui } from "../ui";
 
 export const stopCommand = defineCommand({
   meta: {
@@ -11,18 +11,17 @@ export const stopCommand = defineCommand({
     const { running, pid } = isDaemonRunning();
 
     if (!running) {
-      consola.info("Orpheus is not running");
+      ui.log.info("Orpheus is not running");
       return;
     }
 
-    consola.start("Stopping Orpheus...");
-
+    ui.spinner("Stopping Orpheus...");
     const { stopped } = stopDaemon();
 
     if (stopped) {
-      consola.success(`Orpheus stopped (PID: ${pid})`);
+      ui.log.success(`Orpheus stopped ${ui.dim(`(PID: ${pid})`)}`);
     } else {
-      consola.error(`Failed to stop Orpheus (PID: ${pid})`);
+      ui.log.error(`Failed to stop Orpheus ${ui.dim(`(PID: ${pid})`)}`);
       process.exit(1);
     }
   },

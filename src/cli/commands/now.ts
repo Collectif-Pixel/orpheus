@@ -1,6 +1,6 @@
 import { defineCommand } from "citty";
-import consola from "consola";
 import { mediaDetector } from "../../core/media";
+import { ui } from "../ui";
 
 export const nowCommand = defineCommand({
   meta: {
@@ -19,7 +19,7 @@ export const nowCommand = defineCommand({
       const track = await mediaDetector.getNowPlaying();
 
       if (!track) {
-        consola.warn("No music playing");
+        ui.log.warning("No music playing");
         return;
       }
 
@@ -28,21 +28,15 @@ export const nowCommand = defineCommand({
         return;
       }
 
-      consola.box({
-        title: track.playing ? "▶ Now Playing" : "⏸ Paused",
-        message: `${track.title}\n${track.artist}${track.album ? `\n${track.album}` : ""}`,
-        style: {
-          borderColor: "cyan",
-        },
-      });
+      ui.nowPlaying(track);
     } catch (error) {
       if ((error as Error).message?.includes("media-control")) {
-        consola.error("media-control not found. Install it with:");
-        consola.info("  brew tap ungive/media-control && brew install media-control");
+        ui.log.error("media-control not found");
+        ui.log.info("Install with: brew install media-control");
         process.exit(1);
       }
 
-      consola.error("Failed to get now playing info");
+      ui.log.error("Failed to get now playing info");
     }
   },
 });

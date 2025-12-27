@@ -1,9 +1,9 @@
 import { defineCommand } from "citty";
 import { $ } from "bun";
-import consola from "consola";
 import { existsSync, mkdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { getThemesDir, loadConfig, saveConfig } from "../../core/config";
+import { ui } from "../ui";
 
 export const addCommand = defineCommand({
   meta: {
@@ -21,14 +21,14 @@ export const addCommand = defineCommand({
     const themeName = args.theme as string;
 
     if (!themeName.startsWith("@") || !themeName.includes("/")) {
-      consola.error("Invalid theme name. Use format: @user/theme-name");
-      consola.info("Example: orpheus add @roseratugo/neon");
+      ui.log.error("Invalid format. Use: @user/theme-name");
+      ui.log.info("Example: orpheus add @roseratugo/neon");
       process.exit(1);
     }
 
     const [scope, name] = themeName.slice(1).split("/");
     if (!scope || !name) {
-      consola.error("Invalid theme name format");
+      ui.log.error("Invalid theme name");
       process.exit(1);
     }
 
@@ -37,8 +37,8 @@ export const addCommand = defineCommand({
     const themeDir = join(scopeDir, name);
 
     if (existsSync(themeDir)) {
-      consola.warn(`Theme ${themeName} is already installed`);
-      consola.info("To update, remove it first: orpheus remove " + themeName);
+      ui.log.warning(`${themeName} already installed`);
+      ui.log.info(`Remove first: orpheus remove ${themeName}`);
       return;
     }
 
@@ -47,20 +47,19 @@ export const addCommand = defineCommand({
     }
 
     const repoUrl = `https://github.com/${scope}/${name}.git`;
-    consola.start(`Installing ${themeName} from ${repoUrl}...`);
+    ui.spinner(`Installing ${ui.primary(themeName)}...`);
 
     try {
       await $`git clone --depth 1 ${repoUrl} ${themeDir}`.quiet();
     } catch {
-      consola.error(`Failed to clone repository: ${repoUrl}`);
-      consola.info("Make sure the repository exists and is public");
+      ui.log.error(`Failed to clone: ${repoUrl}`);
+      ui.log.info("Make sure the repository exists and is public");
       process.exit(1);
     }
 
     const themeHtml = join(themeDir, "theme.html");
     if (!existsSync(themeHtml)) {
-      consola.error("Invalid theme: theme.html not found");
-      consola.info("Removing invalid theme...");
+      ui.log.error("Invalid theme: theme.html not found");
       await $`rm -rf ${themeDir}`.quiet();
       process.exit(1);
     }
@@ -84,7 +83,9 @@ export const addCommand = defineCommand({
     };
     saveConfig(config);
 
-    consola.success(`Theme ${themeName} installed successfully`);
-    consola.info(`Use it with: orpheus use ${themeName}`);
+    ui.br();
+    ui.log.success(`Installed ${ui.primary(themeName)}`);
+    ui.log.info(`Use it: orpheus use ${themeName}`);
+    ui.br();
   },
 });
