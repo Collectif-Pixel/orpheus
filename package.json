@@ -1,0 +1,21 @@
+{
+  "name": "orpheus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Now Playing overlay for OBS - Works with any music service",
+  "author": "Collectif Pixel",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/cli/index.ts",
+    "start": "bun run src/cli/index.ts start",
+    "build": "bun build src/cli/index.ts --compile --outfile dist/orpheus"
+  },
+  "dependencies": {
+    "citty": "^0.1.6",
+    "consola": "^3.4.2"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
