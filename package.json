@@ -12,6 +12,7 @@
     "build": "bun build src/cli/index.ts --compile --outfile dist/orpheus"
   },
   "dependencies": {
+    "@clack/prompts": "^0.11.0",
     "citty": "^0.1.6",
     "consola": "^3.4.2",
     "picocolors": "^1.1.1"

@@ -8,11 +8,12 @@ import { addCommand } from "./commands/add";
 import { useCommand } from "./commands/use";
 import { removeCommand } from "./commands/remove";
 import { updateCommand } from "./commands/update";
+import { searchCommand } from "./commands/search";
 
 const main = defineCommand({
   meta: {
     name: "orpheus",
-    version: "0.1.6",
+    version: "0.1.7",
     description: "Now Playing overlay for OBS - Works with any music service",
   },
   subCommands: {
@@ -21,6 +22,7 @@ const main = defineCommand({
     status: statusCommand,
     now: nowCommand,
     themes: themesCommand,
+    search: searchCommand,
     add: addCommand,
     use: useCommand,
     remove: removeCommand,
