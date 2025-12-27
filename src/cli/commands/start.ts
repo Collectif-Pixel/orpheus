@@ -47,10 +47,9 @@ export const startCommand = defineCommand({
       try {
         ensureConfigDir();
         const logPath = getLogFilePath();
-        const cliPath = import.meta.dir + "/../../cli/index.ts";
 
         const child = spawn({
-          cmd: ["nohup", "bun", "run", cliPath, "start", "--foreground", "--port", port.toString()],
+          cmd: [process.execPath, "start", "--foreground", "--port", port.toString()],
           stdout: "ignore",
           stderr: "ignore",
           stdin: "ignore",
@@ -85,7 +84,7 @@ function handleStartError(error: unknown, port: number): void {
 
   if ((error as Error).message?.includes("media-control")) {
     consola.error("media-control not found. Install it with:");
-    consola.info("  brew tap ungive/media-control && brew install media-control");
+    consola.info("  brew install media-control");
     process.exit(1);
   }
 
