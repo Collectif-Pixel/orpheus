@@ -17,7 +17,6 @@ const icons = {
 };
 
 export const ui = {
-  // Colors
   primary: (text: string) => pc.cyan(text),
   success: (text: string) => pc.green(text),
   error: (text: string) => pc.red(text),
@@ -26,7 +25,6 @@ export const ui = {
   bold: (text: string) => pc.bold(text),
   muted: (text: string) => pc.gray(text),
 
-  // Status messages
   log: {
     success: (msg: string) => console.log(`${pc.green(icons.success)} ${msg}`),
     error: (msg: string) => console.log(`${pc.red(icons.error)} ${msg}`),
@@ -34,14 +32,12 @@ export const ui = {
     info: (msg: string) => console.log(`${pc.cyan(icons.info)} ${msg}`),
   },
 
-  // Branded header
   header: (title: string) => {
     console.log();
     console.log(`  ${pc.bold(pc.cyan("◆"))} ${pc.bold(title)}`);
     console.log();
   },
 
-  // Now playing box
   nowPlaying: (track: { title: string; artist: string; album?: string; playing: boolean }) => {
     const icon = track.playing ? pc.green(icons.play) : pc.yellow(icons.pause);
     const status = track.playing ? "Now Playing" : "Paused";
@@ -56,7 +52,6 @@ export const ui = {
     console.log();
   },
 
-  // Server status
   serverStatus: (opts: { running: boolean; pid?: number | null; port?: number; theme?: string; logs?: string }) => {
     console.log();
 
@@ -73,7 +68,6 @@ export const ui = {
     console.log();
   },
 
-  // Theme list
   themeList: (themes: Array<{ name: string; version: string; author: string; active: boolean }>) => {
     console.log();
     console.log(`  ${pc.bold(pc.cyan("◆"))} ${pc.bold("Themes")} ${pc.dim(`(${themes.length})`)}`);
@@ -93,9 +87,7 @@ export const ui = {
     console.log();
   },
 
-  // Progress indicator
   spinner: (msg: string) => console.log(`  ${pc.cyan("◐")} ${msg}`),
 
-  // Blank line
   br: () => console.log(),
 };
