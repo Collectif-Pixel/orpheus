@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "fs";
 import { mediaDetector } from "../core/media";
 import { loadConfig, getThemesDir } from "../core/config";
 import { cleanupPid } from "../core/daemon";
+import { defaultTheme } from "../themes/default";
 import type { NowPlayingData } from "../core/types";
 
 const sseClients = new Set<WritableStreamDefaultWriter<Uint8Array>>();
@@ -81,10 +82,13 @@ async function handleRequest(req: Request): Promise<Response> {
     const config = loadConfig();
     const themeName = url.searchParams.get("theme") || config.currentTheme;
 
-    const themePath = themeName === "default"
-      ? join(import.meta.dir, "..", "themes", "default", "theme.html")
-      : join(getThemesDir(), themeName, "theme.html");
+    if (themeName === "default") {
+      return new Response(defaultTheme, {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
 
+    const themePath = join(getThemesDir(), themeName, "theme.html");
     if (!existsSync(themePath)) {
       return new Response(`Theme "${themeName}" not found`, { status: 404 });
     }

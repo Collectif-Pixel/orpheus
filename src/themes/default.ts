@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+export const defaultTheme = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -106,7 +106,6 @@
         return;
       }
 
-      // Check if track changed
       const trackChanged = !currentTrack ||
         currentTrack.title !== data.title ||
         currentTrack.artist !== data.artist;
@@ -126,10 +125,9 @@
 
       container.classList.add('visible');
 
-      // Animate on track change
       if (trackChanged) {
         container.style.animation = 'none';
-        container.offsetHeight; // Trigger reflow
+        container.offsetHeight;
         container.style.animation = null;
       }
     }
@@ -146,9 +144,7 @@
         }
       });
 
-      eventSource.addEventListener('ping', () => {
-        // Keep-alive, do nothing
-      });
+      eventSource.addEventListener('ping', () => {});
 
       eventSource.onerror = () => {
         console.log('SSE connection lost, reconnecting...');
@@ -157,14 +153,12 @@
       };
     }
 
-    // Initial fetch
     fetch('/api/now-playing')
       .then(res => res.json())
       .then(updateUI)
       .catch(console.error);
 
-    // Connect to SSE
     connectSSE();
   </script>
 </body>
-</html>
+</html>`;
