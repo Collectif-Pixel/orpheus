@@ -1,6 +1,6 @@
 {
   "name": "orpheus",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "description": "Now Playing overlay for OBS - Works with any music service",
   "author": "Collectif Pixel",

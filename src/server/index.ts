@@ -35,7 +35,7 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (path === "/api/health") {
-    return Response.json({ status: "ok", version: "0.1.4" }, { headers: corsHeaders() });
+    return Response.json({ status: "ok", version: "0.1.5" }, { headers: corsHeaders() });
   }
 
   if (path === "/api/now-playing") {
@@ -105,7 +105,7 @@ async function handleRequest(req: Request): Promise<Response> {
   return new Response("Not Found", { status: 404 });
 }
 
-let port = 3000;
+let port = 4242;
 
 function gracefulShutdown(): void {
   console.log("\nShutting down Orpheus...");

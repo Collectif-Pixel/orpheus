@@ -1,6 +1,5 @@
 <div align="center">
-  <h1>Orpheus</h1>
-  <p>Now Playing overlay for OBS — Works with any music service</p>
+  <img src="./.github/thumbnail.jpg" alt="Orpheus">
 </div>
 
 <div align="center">
@@ -17,7 +16,8 @@
 
 Display what you're listening to on your stream. Orpheus detects music from any app on macOS (Deezer, Spotify, Apple Music, YouTube...) and serves a customizable overlay for OBS.
 
-- **Universal detection** — Works with any music app via macOS MediaRemote
+- **macOS only** — Uses native MediaRemote framework
+- **Universal detection** — Works with any music app (Spotify, Deezer, Apple Music...)
 - **Real-time updates** — SSE streaming with <50ms latency
 - **Community themes** — Install themes from GitHub with one command
 - **Daemon mode** — Runs in background, no terminal needed
@@ -52,7 +52,7 @@ orpheus stop
 orpheus now
 ```
 
-Then add `http://localhost:3000/now-playing` as a Browser Source in OBS.
+Then add `http://localhost:4242/now-playing` as a Browser Source in OBS.
 
 ## Themes
 

@@ -8,7 +8,7 @@ const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 const THEMES_DIR = join(CONFIG_DIR, "themes");
 
 const DEFAULT_CONFIG: OrpheusConfig = {
-  port: 3000,
+  port: 4242,
   currentTheme: "default",
   themes: {},
 };
