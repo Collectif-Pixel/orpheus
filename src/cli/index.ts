@@ -11,7 +11,7 @@ import { removeCommand } from "./commands/remove";
 const main = defineCommand({
   meta: {
     name: "orpheus",
-    version: "0.1.3",
+    version: "0.1.4",
     description: "Now Playing overlay for OBS - Works with any music service",
   },
   subCommands: {
