@@ -38,7 +38,7 @@ Themes are single HTML files that connect to the SSE endpoint:
 2. Add `package.json` with theme metadata
 3. Users install with `orpheus add @username/theme-name`
 
-See [orpheus-theme-template](https://github.com/roseratugo/orpheus-theme-template) for a starter.
+See [orpheus-theme-template](https://github.com/Collectif-Pixel/orpheus-theme-template) for a starter.
 
 ## Pull Requests
 
