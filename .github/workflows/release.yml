@@ -30,10 +30,9 @@ jobs:
         run: bun install
 
       - name: Build binary
-        run: bun build src/cli/index.ts --compile --outfile ${{ matrix.artifact }} --target ${{ matrix.target }}
-
-      - name: Create tarball
-        run: tar -czvf ${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}
+        run: |
+          bun build src/cli/index.ts --compile --outfile orpheus --target ${{ matrix.target }}
+          tar -czvf ${{ matrix.artifact }}.tar.gz orpheus
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
