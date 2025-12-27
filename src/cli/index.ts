@@ -13,7 +13,7 @@ import { searchCommand } from "./commands/search";
 const main = defineCommand({
   meta: {
     name: "orpheus",
-    version: "0.1.7",
+    version: "0.1.8",
     description: "Now Playing overlay for OBS - Works with any music service",
   },
   subCommands: {

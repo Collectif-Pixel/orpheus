@@ -57,26 +57,35 @@ Then add `http://localhost:4242/now-playing` as a Browser Source in OBS.
 ## Themes
 
 ```bash
+# Browse & install from marketplace
+orpheus search
+
 # List installed themes
 orpheus themes
 
 # Install from GitHub
-orpheus add @roseratugo/neon
+orpheus add @roseratugo/colorz
 
 # Switch theme
-orpheus use @roseratugo/neon
+orpheus use @roseratugo/colorz
 
 # Update a theme
-orpheus update @roseratugo/neon
+orpheus update @roseratugo/colorz
 
 # Update all themes
 orpheus update
 
 # Remove theme
-orpheus remove @roseratugo/neon
+orpheus remove @roseratugo/colorz
 ```
 
 ### Create a Theme
+
+Use the [theme template](https://github.com/Collectif-Pixel/orpheus-theme-template) to get started:
+
+```bash
+gh repo create my-theme --template Collectif-Pixel/orpheus-theme-template
+```
 
 A theme is a single `theme.html` file that connects to the SSE endpoint:
 
@@ -88,22 +97,18 @@ A theme is a single `theme.html` file that connects to the SSE endpoint:
   <script>
     const es = new EventSource('/api/stream');
     es.addEventListener('track', (e) => {
-      const { title, artist, coverUrl } = JSON.parse(e.data);
-      document.getElementById('track').innerHTML = `${artist} — ${title}`;
+      const { title, artist, artwork } = JSON.parse(e.data);
+      document.getElementById('track').innerHTML = `${artist} - ${title}`;
     });
   </script>
 </body>
 </html>
 ```
 
-Publish your theme on GitHub:
+### Publish to Marketplace
 
-```
-your-theme/
-├── package.json
-├── theme.html
-└── README.md
-```
+1. Push your theme to GitHub
+2. Submit a PR to [orpheus-themes](https://github.com/Collectif-Pixel/orpheus-themes) registry
 
 ## API
 

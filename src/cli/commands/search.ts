@@ -63,7 +63,7 @@ export const searchCommand = defineCommand({
         return {
           value: t,
           label: `${t.displayName}${status}`,
-          hint: t.description,
+          hint: `by ${t.author} - ${t.description}`,
         };
       }),
     });
