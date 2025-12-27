@@ -66,6 +66,12 @@ orpheus add @roseratugo/neon
 # Switch theme
 orpheus use @roseratugo/neon
 
+# Update a theme
+orpheus update @roseratugo/neon
+
+# Update all themes
+orpheus update
+
 # Remove theme
 orpheus remove @roseratugo/neon
 ```
