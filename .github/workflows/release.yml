@@ -29,7 +29,7 @@ jobs:
             target: bun-linux-arm64
             artifact: orpheus-linux-arm64
           - name: windows-x64
-            os: windows-latest
+            os: ubuntu-latest
             target: bun-windows-x64-baseline
             artifact: orpheus-windows-x64.exe
 
