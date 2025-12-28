@@ -2,7 +2,7 @@ import { spawn, type Subprocess } from "bun";
 import { MediaDetector } from "./index";
 import type { NowPlayingData } from "../types";
 
-const STREAM_SCRIPT = `
+const PS_INIT = `
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
 
 $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType = WindowsRuntime]
@@ -17,42 +17,43 @@ function Await($WinRtTask, $ResultType) {
   $netTask.Result
 }
 
+function Get-Artwork($mediaProps) {
+  if ($mediaProps.Thumbnail) {
+    try {
+      $stream = Await ($mediaProps.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
+      $reader = [Windows.Storage.Streams.DataReader]::new($stream)
+      Await ($reader.LoadAsync($stream.Size)) ([uint32]) | Out-Null
+      $bytes = New-Object byte[] $stream.Size
+      $reader.ReadBytes($bytes)
+      $artwork = [Convert]::ToBase64String($bytes)
+      $reader.Dispose()
+      $stream.Dispose()
+      return $artwork
+    } catch {}
+  }
+  return $null
+}
+`;
+
+const STREAM_SCRIPT = `${PS_INIT}
 function Get-MediaInfo {
   try {
     $sessionManager = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
     $session = $sessionManager.GetCurrentSession()
 
-    if ($null -eq $session) {
-      return $null
-    }
+    if ($null -eq $session) { return $null }
 
     $mediaProps = Await ($session.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
     $playbackInfo = $session.GetPlaybackInfo()
-
-    $artwork = $null
-    if ($mediaProps.Thumbnail) {
-      try {
-        $stream = Await ($mediaProps.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
-        $reader = [Windows.Storage.Streams.DataReader]::new($stream)
-        Await ($reader.LoadAsync($stream.Size)) ([uint32]) | Out-Null
-        $bytes = New-Object byte[] $stream.Size
-        $reader.ReadBytes($bytes)
-        $artwork = [Convert]::ToBase64String($bytes)
-        $reader.Dispose()
-        $stream.Dispose()
-      } catch {}
-    }
 
     @{
       title = $mediaProps.Title
       artist = $mediaProps.Artist
       album = $mediaProps.AlbumTitle
       playing = $playbackInfo.PlaybackStatus -eq 'Playing'
-      artwork = $artwork
+      artwork = Get-Artwork $mediaProps
     }
-  } catch {
-    $null
-  }
+  } catch { $null }
 }
 
 $lastTitle = ""
@@ -60,14 +61,42 @@ $lastArtist = ""
 
 while ($true) {
   $info = Get-MediaInfo
-
   if ($null -ne $info -and ($info.title -ne $lastTitle -or $info.artist -ne $lastArtist)) {
     $lastTitle = $info.title
     $lastArtist = $info.artist
     $info | ConvertTo-Json -Compress
   }
-
   Start-Sleep -Milliseconds 500
+}
+`;
+
+const GET_SCRIPT = `${PS_INIT}
+try {
+  $sessionManager = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
+  $session = $sessionManager.GetCurrentSession()
+
+  if ($null -eq $session) {
+    Write-Output '{}'
+    exit
+  }
+
+  $mediaProps = Await ($session.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
+  $playbackInfo = $session.GetPlaybackInfo()
+  $timelineProps = $session.GetTimelineProperties()
+
+  $result = @{
+    title = $mediaProps.Title
+    artist = $mediaProps.Artist
+    album = $mediaProps.AlbumTitle
+    playing = $playbackInfo.PlaybackStatus -eq 'Playing'
+    duration = $timelineProps.EndTime.TotalSeconds
+    elapsedTime = $timelineProps.Position.TotalSeconds
+    artworkData = Get-Artwork $mediaProps
+  }
+
+  $result | ConvertTo-Json -Compress
+} catch {
+  Write-Output '{}'
 }
 `;
 
@@ -150,65 +179,7 @@ export class WindowsMediaDetector extends MediaDetector {
 
   async getNowPlaying(): Promise<NowPlayingData | null> {
     try {
-      const psScript = `
-        Add-Type -AssemblyName System.Runtime.WindowsRuntime
-
-        $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType = WindowsRuntime]
-        $null = [Windows.Storage.Streams.DataReader, Windows.Storage.Streams, ContentType = WindowsRuntime]
-
-        function Await($WinRtTask, $ResultType) {
-          $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() |
-            Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation\`1' })[0]
-          $asTask = $asTaskGeneric.MakeGenericMethod($ResultType)
-          $netTask = $asTask.Invoke($null, @($WinRtTask))
-          $netTask.Wait(-1) | Out-Null
-          $netTask.Result
-        }
-
-        try {
-          $sessionManager = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
-          $session = $sessionManager.GetCurrentSession()
-
-          if ($null -eq $session) {
-            Write-Output '{}'
-            exit
-          }
-
-          $mediaProps = Await ($session.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
-          $playbackInfo = $session.GetPlaybackInfo()
-          $timelineProps = $session.GetTimelineProperties()
-
-          $artwork = $null
-          if ($mediaProps.Thumbnail) {
-            try {
-              $stream = Await ($mediaProps.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
-              $reader = [Windows.Storage.Streams.DataReader]::new($stream)
-              Await ($reader.LoadAsync($stream.Size)) ([uint32]) | Out-Null
-              $bytes = New-Object byte[] $stream.Size
-              $reader.ReadBytes($bytes)
-              $artwork = [Convert]::ToBase64String($bytes)
-              $reader.Dispose()
-              $stream.Dispose()
-            } catch {}
-          }
-
-          $result = @{
-            title = $mediaProps.Title
-            artist = $mediaProps.Artist
-            album = $mediaProps.AlbumTitle
-            playing = $playbackInfo.PlaybackStatus -eq 'Playing'
-            duration = $timelineProps.EndTime.TotalSeconds
-            elapsedTime = $timelineProps.Position.TotalSeconds
-            artworkData = $artwork
-          }
-
-          $result | ConvertTo-Json -Compress
-        } catch {
-          Write-Output '{}'
-        }
-      `;
-
-      const proc = spawn(["powershell", "-NoProfile", "-Command", psScript], {
+      const proc = spawn(["powershell", "-NoProfile", "-Command", GET_SCRIPT], {
         stdout: "pipe",
         stderr: "pipe",
       });

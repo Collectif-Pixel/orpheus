@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { DEFAULT_PORT } from "./constants";
+import { logger } from "./logger";
 import type { OrpheusConfig } from "./types";
 
 const CONFIG_DIR = join(homedir(), ".orpheus");
@@ -55,7 +56,7 @@ export function loadConfig(): OrpheusConfig {
 
     return config;
   } catch {
-    console.error("Failed to load config, using defaults");
+    logger.error("Failed to load config, using defaults");
     return DEFAULT_CONFIG;
   }
 }

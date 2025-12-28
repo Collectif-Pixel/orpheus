@@ -5,6 +5,7 @@ import { loadConfig, getThemesDir } from "../core/config";
 import { cleanupPid } from "../core/daemon";
 import { defaultTheme } from "../themes/default";
 import { SSE_KEEP_ALIVE_MS, VERSION } from "../core/constants";
+import { logger } from "../core/logger";
 import type { NowPlayingData } from "../core/types";
 
 const sseClients = new Set<WritableStreamDefaultWriter<Uint8Array>>();
@@ -110,7 +111,7 @@ async function handleRequest(req: Request): Promise<Response> {
 let port = 4242;
 
 function gracefulShutdown(): void {
-  console.log("\nShutting down Orpheus...");
+  logger.shutdown();
   for (const writer of sseClients) {
     writer.close().catch(() => {});
   }
@@ -129,8 +130,7 @@ export async function startServer(serverPort: number): Promise<void> {
   await mediaDetector.start();
   await mediaDetector.getNowPlaying();
 
-  console.log(`Orpheus server running at http://localhost:${port}`);
-  console.log(`Open http://localhost:${port}/now-playing in OBS Browser Source`);
+  logger.server(port);
 
   Bun.serve({
     port,
