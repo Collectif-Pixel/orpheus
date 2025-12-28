@@ -1,17 +1,32 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
+import { DEFAULT_PORT } from "./constants";
+import { logger } from "./logger";
 import type { OrpheusConfig } from "./types";
 
 const CONFIG_DIR = join(homedir(), ".orpheus");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 const THEMES_DIR = join(CONFIG_DIR, "themes");
 
+const CURRENT_CONFIG_VERSION = 1;
+
 const DEFAULT_CONFIG: OrpheusConfig = {
-  port: 4242,
+  configVersion: CURRENT_CONFIG_VERSION,
+  port: DEFAULT_PORT,
   currentTheme: "default",
   themes: {},
 };
+
+function migrateConfig(config: Partial<OrpheusConfig>): OrpheusConfig {
+  const version = config.configVersion ?? 0;
+
+  if (version < CURRENT_CONFIG_VERSION) {
+    config.configVersion = CURRENT_CONFIG_VERSION;
+  }
+
+  return { ...DEFAULT_CONFIG, ...config };
+}
 
 export function ensureConfigDir(): void {
   if (!existsSync(CONFIG_DIR)) {
@@ -32,8 +47,16 @@ export function loadConfig(): OrpheusConfig {
 
   try {
     const content = readFileSync(CONFIG_FILE, "utf-8");
-    return { ...DEFAULT_CONFIG, ...JSON.parse(content) };
+    const parsed = JSON.parse(content);
+    const config = migrateConfig(parsed);
+
+    if (config.configVersion !== parsed.configVersion) {
+      saveConfig(config);
+    }
+
+    return config;
   } catch {
+    logger.error("Failed to load config, using defaults");
     return DEFAULT_CONFIG;
   }
 }

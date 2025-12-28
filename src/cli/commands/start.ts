@@ -3,6 +3,7 @@ import { spawn, $ } from "bun";
 import { startServer } from "../../server";
 import { loadConfig, ensureConfigDir } from "../../core/config";
 import { isDaemonRunning, writePid, getLogFilePath } from "../../core/daemon";
+import { DAEMON_START_DELAY_MS } from "../../core/constants";
 import { ui } from "../ui";
 
 export const startCommand = defineCommand({
@@ -26,6 +27,11 @@ export const startCommand = defineCommand({
   async run({ args }) {
     const config = loadConfig();
     const port = args.port ? parseInt(args.port, 10) : config.port;
+
+    if (isNaN(port) || port < 1 || port > 65535) {
+      ui.log.error("Invalid port. Must be between 1 and 65535");
+      process.exit(1);
+    }
 
     const { running, pid: existingPid } = isDaemonRunning();
     if (running) {
@@ -56,7 +62,7 @@ export const startCommand = defineCommand({
         });
 
         await $`echo "=== Orpheus started at $(date) ===" >> ${logPath}`.quiet();
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        await new Promise((resolve) => setTimeout(resolve, DAEMON_START_DELAY_MS));
 
         if (child.exitCode !== null) {
           ui.log.error("Failed to start daemon");

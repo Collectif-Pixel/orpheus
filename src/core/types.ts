@@ -1,12 +1,12 @@
 export interface NowPlayingData {
   title: string;
   artist: string;
-  album?: string;
-  coverUrl?: string;
+  album?: string | undefined;
+  coverUrl?: string | undefined;
   playing: boolean;
-  duration?: number;
-  elapsedTime?: number;
-  bundleIdentifier?: string;
+  duration?: number | undefined;
+  elapsedTime?: number | undefined;
+  bundleIdentifier?: string | undefined;
 }
 
 export interface MediaControlResponse {
@@ -24,6 +24,7 @@ export interface MediaControlResponse {
 }
 
 export interface OrpheusConfig {
+  configVersion: number;
   port: number;
   currentTheme: string;
   themes: Record<string, ThemeConfig>;

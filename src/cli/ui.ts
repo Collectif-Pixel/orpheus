@@ -38,7 +38,7 @@ export const ui = {
     console.log();
   },
 
-  nowPlaying: (track: { title: string; artist: string; album?: string; playing: boolean }) => {
+  nowPlaying: (track: { title: string; artist: string; album?: string | undefined; playing: boolean }) => {
     const icon = track.playing ? pc.green(icons.play) : pc.yellow(icons.pause);
     const status = track.playing ? "Now Playing" : "Paused";
 

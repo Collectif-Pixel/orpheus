@@ -14,9 +14,9 @@
 
 ## Why Orpheus?
 
-Display what you're listening to on your stream. Orpheus detects music from any app on macOS (Deezer, Spotify, Apple Music, YouTube...) and serves a customizable overlay for OBS.
+Display what you're listening to on your stream. Orpheus detects music from any app (Deezer, Spotify, Apple Music, YouTube...) and serves a customizable overlay for OBS.
 
-- **macOS only** — Uses native MediaRemote framework
+- **Cross-platform** — Works on macOS, Windows, and Linux
 - **Universal detection** — Works with any music app (Spotify, Deezer, Apple Music...)
 - **Real-time updates** — SSE streaming with <50ms latency
 - **Community themes** — Install themes from GitHub with one command
@@ -26,11 +26,25 @@ Display what you're listening to on your stream. Orpheus detects music from any 
 
 ## Installation
 
+### macOS
+
 ```bash
 brew install collectif-pixel/tap/orpheus
 ```
 
-This automatically installs `media-control` as a dependency.
+### Linux / macOS (universal script)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/collectif-pixel/orpheus/main/scripts/install.sh | bash
+```
+
+> **Note:** Linux requires `playerctl` for media detection. Install it with your package manager (`apt install playerctl`, `pacman -S playerctl`, etc.)
+
+### Windows
+
+```powershell
+irm https://raw.githubusercontent.com/collectif-pixel/orpheus/main/scripts/install.ps1 | iex
+```
 
 ## Usage
 
