@@ -34,7 +34,7 @@ jobs:
             artifact: orpheus-linux-arm64
           - name: windows-x64
             os: windows-latest
-            target: bun-windows-x64-baseline
+            target: bun-windows-x64
             artifact: orpheus-windows-x64.exe
 
     steps:
@@ -42,7 +42,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: "1.1.38"
 
       - name: Install dependencies
         run: bun install
