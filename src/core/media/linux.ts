@@ -95,29 +95,34 @@ export class LinuxMediaDetector extends MediaDetector {
     );
   }
 
-  private processPlayerctlOutput(line: string): void {
+  private async processPlayerctlOutput(line: string): Promise<void> {
     try {
       const data = JSON.parse(line);
       const track = this.parsePlayerctlData(data);
 
-      if (track.title && track.artist) {
-        if (this.hasTrackChanged(track)) {
-          const artUrl = data.artUrl?.trim();
-          if (artUrl && artUrl.startsWith("file://")) {
-            this.loadLocalArtwork(artUrl, track);
-          } else if (artUrl && (artUrl.startsWith("http://") || artUrl.startsWith("https://"))) {
-            track.coverUrl = artUrl;
-            this.emitTrack(track);
-          } else {
-            this.emitTrack(track);
+      if (!track.title || !track.artist) return;
+
+      const trackChanged = this.hasTrackChanged(track);
+      const artUrl = data.artUrl?.trim();
+
+      if (trackChanged) {
+        this.emitTrack(track);
+      }
+
+      if (artUrl) {
+        const currentTitle = track.title;
+        const currentArtist = track.artist;
+
+        if (artUrl.startsWith("file://")) {
+          const coverUrl = await this.loadArtworkFromFile(artUrl);
+          if (coverUrl && this.currentTrack?.title === currentTitle && this.currentTrack?.artist === currentArtist) {
+            this.currentTrack.coverUrl = coverUrl;
+            this.emit("track", this.currentTrack);
           }
-        } else if (this.currentTrack && !this.currentTrack.coverUrl) {
-          const artUrl = data.artUrl?.trim();
-          if (artUrl && (artUrl.startsWith("http://") || artUrl.startsWith("https://"))) {
+        } else if (artUrl.startsWith("http://") || artUrl.startsWith("https://")) {
+          if (this.currentTrack && this.currentTrack.coverUrl !== artUrl) {
             this.currentTrack.coverUrl = artUrl;
             this.emit("track", this.currentTrack);
-          } else if (artUrl && artUrl.startsWith("file://")) {
-            this.loadLocalArtwork(artUrl, this.currentTrack);
           }
         }
       }
@@ -126,10 +131,7 @@ export class LinuxMediaDetector extends MediaDetector {
     }
   }
 
-  private async loadLocalArtwork(
-    fileUrl: string,
-    track: NowPlayingData
-  ): Promise<void> {
+  private async loadArtworkFromFile(fileUrl: string): Promise<string | null> {
     try {
       const filePath = fileUrl.replace(/^file:\/\//, "");
       const file = Bun.file(filePath);
@@ -144,13 +146,12 @@ export class LinuxMediaDetector extends MediaDetector {
           gif: "image/gif",
           webp: "image/webp",
         };
-        const mimeType = mimeTypes[ext || ""] || "image/jpeg";
-        track.coverUrl = `data:${mimeType};base64,${base64}`;
+        return `data:${mimeTypes[ext || ""] || "image/jpeg"};base64,${base64}`;
       }
     } catch (error) {
       this.emit("error", error);
     }
-    this.emitTrack(track);
+    return null;
   }
 
   private parsePlayerctlData(data: {
