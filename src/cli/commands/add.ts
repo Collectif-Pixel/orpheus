@@ -64,13 +64,21 @@ export const addCommand = defineCommand({
       process.exit(1);
     }
 
+    const themeContent = readFileSync(themeHtml, "utf-8");
+    if (!themeContent.includes("/api/stream") && !themeContent.includes("/api/now-playing")) {
+      ui.log.warning("Theme may not work: missing API connection");
+      ui.log.info("Theme should connect to /api/stream or /api/now-playing");
+    }
+
     let version = "unknown";
     const packageJsonPath = join(themeDir, "package.json");
     if (existsSync(packageJsonPath)) {
       try {
         const pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
         version = pkg.version || "unknown";
-      } catch {}
+      } catch {
+        version = "unknown";
+      }
     }
 
     await $`rm -rf ${join(themeDir, ".git")}`.quiet();

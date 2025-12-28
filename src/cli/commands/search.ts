@@ -96,7 +96,9 @@ export const searchCommand = defineCommand({
       process.exit(0);
     }
 
-    const [scope, name] = selectedTheme.name.slice(1).split("/");
+    const parts = selectedTheme.name.slice(1).split("/");
+    const scope = parts[0];
+    const name = parts[1] || "";
     const themesDir = getThemesDir();
     const scopeDir = join(themesDir, `@${scope}`);
     const themeDir = join(scopeDir, name);

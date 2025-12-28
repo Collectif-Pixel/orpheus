@@ -24,6 +24,7 @@ export interface MediaControlResponse {
 }
 
 export interface OrpheusConfig {
+  configVersion: number;
   port: number;
   currentTheme: string;
   themes: Record<string, ThemeConfig>;

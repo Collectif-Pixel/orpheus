@@ -4,6 +4,7 @@ import { mediaDetector } from "../core/media";
 import { loadConfig, getThemesDir } from "../core/config";
 import { cleanupPid } from "../core/daemon";
 import { defaultTheme } from "../themes/default";
+import { SSE_KEEP_ALIVE_MS, VERSION } from "../core/constants";
 import type { NowPlayingData } from "../core/types";
 
 const sseClients = new Set<WritableStreamDefaultWriter<Uint8Array>>();
@@ -35,7 +36,7 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (path === "/api/health") {
-    return Response.json({ status: "ok", version: "0.1.8" }, { headers: corsHeaders() });
+    return Response.json({ status: "ok", version: VERSION }, { headers: corsHeaders() });
   }
 
   if (path === "/api/now-playing") {
@@ -59,7 +60,7 @@ async function handleRequest(req: Request): Promise<Response> {
         clearInterval(keepAlive);
         sseClients.delete(writer);
       });
-    }, 15000);
+    }, SSE_KEEP_ALIVE_MS);
 
     req.signal.addEventListener("abort", () => {
       clearInterval(keepAlive);
@@ -99,7 +100,8 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (path === "/") {
-    return Response.redirect(`http://localhost:${port}/now-playing`, 302);
+    const host = req.headers.get("host") || `localhost:${port}`;
+    return Response.redirect(`http://${host}/now-playing`, 302);
   }
 
   return new Response("Not Found", { status: 404 });
