@@ -22,10 +22,10 @@ function Get-LatestVersion {
 }
 
 function Get-Platform {
-    $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+    $arch = $env:PROCESSOR_ARCHITECTURE
     switch ($arch) {
-        "X64" { return "windows-x64" }
-        "Arm64" {
+        "AMD64" { return "windows-x64" }
+        "ARM64" {
             Write-Warn "Windows ARM64 is not natively supported yet"
             Write-Info "The x64 binary will run via emulation"
             return "windows-x64"
