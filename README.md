@@ -22,6 +22,8 @@ Display what you're listening to on your stream. Orpheus detects music from any 
 - **Community themes** — Install themes from GitHub with one command
 - **Daemon mode** — Runs in background, no terminal needed
 
+<img src="./.github/usage.gif" alt="Orpheus Demo">
+
 ## Installation
 
 ```bash
