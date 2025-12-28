@@ -55,6 +55,41 @@ detect_platform() {
     esac
 }
 
+install_linux_deps() {
+    local missing_deps=()
+
+    if ! command -v playerctl &>/dev/null; then
+        missing_deps+=("playerctl")
+    fi
+
+    if ! command -v git &>/dev/null; then
+        missing_deps+=("git")
+    fi
+
+    if [[ ${#missing_deps[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    local deps_str="${missing_deps[*]}"
+    warn "Missing dependencies: $deps_str"
+
+    if command -v apt &>/dev/null; then
+        info "Installing with apt..."
+        sudo apt update -qq && sudo apt install -y ${missing_deps[*]}
+    elif command -v dnf &>/dev/null; then
+        info "Installing with dnf..."
+        sudo dnf install -y ${missing_deps[*]}
+    elif command -v pacman &>/dev/null; then
+        info "Installing with pacman..."
+        sudo pacman -S --noconfirm ${missing_deps[*]}
+    else
+        warn "Could not auto-install. Please install manually: $deps_str"
+        return 1
+    fi
+
+    success "Dependencies installed"
+}
+
 check_dependencies() {
     local platform=$1
 
@@ -65,15 +100,13 @@ check_dependencies() {
                 info "Install with: brew install collectif-pixel/tap/media-control"
                 info "Or run: brew install collectif-pixel/tap/orpheus (includes media-control)"
             fi
+            if ! command -v git &>/dev/null; then
+                warn "git not found (required for theme installation)"
+                info "Install with: brew install git"
+            fi
             ;;
         linux-*)
-            if ! command -v playerctl &>/dev/null; then
-                warn "playerctl not found (required for media detection)"
-                info "Install with your package manager:"
-                info "  Ubuntu/Debian: sudo apt install playerctl"
-                info "  Fedora: sudo dnf install playerctl"
-                info "  Arch: sudo pacman -S playerctl"
-            fi
+            install_linux_deps
             ;;
     esac
 }
