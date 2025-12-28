@@ -53,7 +53,8 @@ jobs:
       - name: Create tarball (Unix)
         if: runner.os != 'Windows'
         run: |
-          tar -czvf ${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}
+          mv ${{ matrix.artifact }} orpheus
+          tar -czvf ${{ matrix.artifact }}.tar.gz orpheus
 
       - name: Upload artifact (Unix)
         if: runner.os != 'Windows'
@@ -118,11 +119,11 @@ jobs:
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
           SHA256_ARM64=$(grep "darwin-arm64" checksums.txt | cut -d' ' -f1)
-          SHA256_X64=$(grep "darwin-x64" checksums.txt | cut -d' ' -f1)
 
           cd homebrew-tap
           sed -i "s/version \".*\"/version \"${VERSION}\"/" Formula/orpheus.rb
           sed -i "s|releases/download/v[^/]*/|releases/download/v${VERSION}/|g" Formula/orpheus.rb
+          sed -i "s/sha256 \".*\"/sha256 \"${SHA256_ARM64}\"/" Formula/orpheus.rb
 
       - name: Commit and push
         run: |
