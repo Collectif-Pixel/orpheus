@@ -44,7 +44,9 @@ curl -fsSL https://raw.githubusercontent.com/collectif-pixel/orpheus/main/script
 
 > **Warning:** Windows support is experimental. You may encounter issues with Windows Defender blocking the binary or compatibility problems on ARM64 devices.
 
-Download the latest `.exe` from [GitHub Releases](https://github.com/Collectif-Pixel/orpheus/releases) and add it to your PATH manually.
+```bash
+irm https://raw.githubusercontent.com/collectif-pixel/orpheus/main/scripts/install.ps1 | iex
+```
 
 ## Usage
 
