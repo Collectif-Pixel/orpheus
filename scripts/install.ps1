@@ -66,7 +66,7 @@ function Main {
     try {
         tar -xzf $archivePath -C $BinDir
         # Rename extracted binary to orpheus.exe
-        $extractedBinary = "$BinDir\orpheus-$target.exe"
+        $extractedBinary = "$BinDir\orpheus"
         if (Test-Path $extractedBinary) {
             Move-Item -Force $extractedBinary $outputPath
         }

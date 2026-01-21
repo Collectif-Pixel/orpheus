@@ -2,6 +2,20 @@ import { spawn, type Subprocess } from "bun";
 import { MediaDetector } from "./index";
 import type { NowPlayingData } from "../types";
 
+function detectImageMimeType(base64Data: string): string {
+  try {
+    const bytes = Buffer.from(base64Data.slice(0, 16), "base64");
+    const hex = bytes.toString("hex").toUpperCase();
+
+    if (hex.startsWith("FFD8FF")) return "image/jpeg";
+    if (hex.startsWith("89504E47")) return "image/png";
+    if (hex.startsWith("474946")) return "image/gif";
+    if (hex.startsWith("52494646") && hex.substring(16, 24) === "57454250") return "image/webp";
+  } catch {}
+
+  return "image/jpeg";
+}
+
 const PS_INIT = `
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
 
@@ -158,7 +172,7 @@ export class WindowsMediaDetector extends MediaDetector {
         artist: data.artist || "Unknown Artist",
         album: data.album || undefined,
         playing: data.playing ?? true,
-        coverUrl: data.artwork ? `data:image/jpeg;base64,${data.artwork}` : undefined,
+        coverUrl: data.artwork ? `data:${detectImageMimeType(data.artwork)};base64,${data.artwork}` : undefined,
       };
 
       if (this.hasTrackChanged(track)) {
@@ -199,7 +213,7 @@ export class WindowsMediaDetector extends MediaDetector {
         duration: data.duration || undefined,
         elapsedTime: data.elapsedTime || undefined,
         coverUrl: data.artworkData
-          ? `data:image/jpeg;base64,${data.artworkData}`
+          ? `data:${detectImageMimeType(data.artworkData)};base64,${data.artworkData}`
           : undefined,
       };
 
