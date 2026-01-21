@@ -121,8 +121,29 @@ function gracefulShutdown(): void {
   process.exit(0);
 }
 
+async function checkPortAvailable(portToCheck: number): Promise<boolean> {
+  try {
+    const server = Bun.serve({
+      port: portToCheck,
+      fetch: () => new Response(""),
+    });
+    server.stop(true);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function startServer(serverPort: number): Promise<void> {
   port = serverPort;
+
+  // Check port availability before starting
+  const portAvailable = await checkPortAvailable(port);
+  if (!portAvailable) {
+    const error = new Error(`Port ${port} is already in use`) as NodeJS.ErrnoException;
+    error.code = "EADDRINUSE";
+    throw error;
+  }
 
   process.on("SIGTERM", gracefulShutdown);
   process.on("SIGINT", gracefulShutdown);
@@ -130,11 +151,11 @@ export async function startServer(serverPort: number): Promise<void> {
   await mediaDetector.start();
   await mediaDetector.getNowPlaying();
 
-  logger.server(port);
-
   Bun.serve({
     port,
     fetch: handleRequest,
     idleTimeout: 0,
   });
+
+  logger.server(port);
 }

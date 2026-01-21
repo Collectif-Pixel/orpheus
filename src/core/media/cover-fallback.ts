@@ -1,37 +1,26 @@
 /**
  * Cover Art Fallback Service
- * Uses MusicBrainz + Cover Art Archive to fetch album covers
+ * Uses Deezer public API to fetch album covers
  * when the native OS API doesn't provide them.
  */
 
-const MUSICBRAINZ_API = "https://musicbrainz.org/ws/2";
-const COVERART_API = "https://coverartarchive.org";
-const USER_AGENT = "Orpheus/1.0 (https://github.com/music-presence/orpheus)";
+const DEEZER_API = "https://api.deezer.com";
 
-interface MusicBrainzRelease {
-  id: string;
+interface DeezerTrack {
+  id: number;
   title: string;
-  "artist-credit"?: Array<{ name: string }>;
-}
-
-interface MusicBrainzSearchResult {
-  releases: MusicBrainzRelease[];
-}
-
-interface CoverArtImage {
-  image: string;
-  thumbnails: {
-    small?: string;
-    large?: string;
-    "250"?: string;
-    "500"?: string;
-    "1200"?: string;
+  artist: {
+    name: string;
   };
-  front: boolean;
+  album: {
+    title: string;
+    cover_medium: string;
+    cover_big: string;
+  };
 }
 
-interface CoverArtResult {
-  images: CoverArtImage[];
+interface DeezerSearchResult {
+  data: DeezerTrack[];
 }
 
 // Simple in-memory cache to avoid repeated API calls
@@ -39,8 +28,8 @@ const coverCache = new Map<string, string | null>();
 const CACHE_TTL = 1000 * 60 * 30; // 30 minutes
 const cacheTimestamps = new Map<string, number>();
 
-function getCacheKey(artist: string, album: string, title: string): string {
-  return `${artist.toLowerCase()}|${album?.toLowerCase() || title.toLowerCase()}`;
+function getCacheKey(artist: string, title: string): string {
+  return `${artist.toLowerCase()}|${title.toLowerCase()}`;
 }
 
 function getFromCache(key: string): string | null | undefined {
@@ -58,107 +47,55 @@ function setCache(key: string, value: string | null): void {
   cacheTimestamps.set(key, Date.now());
 }
 
-async function searchMusicBrainz(
+async function searchDeezer(
   artist: string,
-  album?: string,
-  title?: string
+  title: string
 ): Promise<string | null> {
   try {
-    // Build search query - prefer album, fallback to track title
-    const searchTerm = album || title;
-    if (!searchTerm) return null;
+    // Build search query
+    const query = encodeURIComponent(`track:"${title}" artist:"${artist}"`);
+    const url = `${DEEZER_API}/search?q=${query}&limit=1`;
 
-    const query = encodeURIComponent(
-      `release:"${searchTerm}" AND artist:"${artist}"`
-    );
-    const url = `${MUSICBRAINZ_API}/release/?fmt=json&limit=5&query=${query}`;
-
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        Accept: "application/json",
-      },
-    });
+    const response = await fetch(url);
 
     if (!response.ok) return null;
 
-    const data = (await response.json()) as MusicBrainzSearchResult;
+    const data = (await response.json()) as DeezerSearchResult;
 
-    if (!data.releases || data.releases.length === 0) return null;
+    if (!data.data || data.data.length === 0) {
+      // Try a simpler search without quotes
+      const simpleQuery = encodeURIComponent(`${artist} ${title}`);
+      const simpleUrl = `${DEEZER_API}/search?q=${simpleQuery}&limit=1`;
+      const simpleResponse = await fetch(simpleUrl);
 
-    // Return the first matching release ID
-    const firstRelease = data.releases[0];
-    return firstRelease ? firstRelease.id : null;
-  } catch {
-    return null;
-  }
-}
+      if (!simpleResponse.ok) return null;
 
-async function fetchCoverFromArchive(mbid: string): Promise<string | null> {
-  try {
-    const url = `${COVERART_API}/release/${mbid}`;
+      const simpleData = (await simpleResponse.json()) as DeezerSearchResult;
+      if (!simpleData.data || simpleData.data.length === 0) return null;
 
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        Accept: "application/json",
-      },
-    });
+      const track = simpleData.data[0];
+      return track?.album?.cover_big || track?.album?.cover_medium || null;
+    }
 
-    if (!response.ok) return null;
-
-    const data = (await response.json()) as CoverArtResult;
-
-    if (!data.images || data.images.length === 0) return null;
-
-    // Find front cover, or use first image
-    const frontCover = data.images.find((img) => img.front) ?? data.images[0];
-    if (!frontCover) return null;
-
-    // Prefer 500px thumbnail for balance of quality and size
-    return (
-      frontCover.thumbnails["500"] ||
-      frontCover.thumbnails["250"] ||
-      frontCover.thumbnails.large ||
-      frontCover.image
-    );
-  } catch {
-    return null;
-  }
-}
-
-async function fetchImageAsBase64(imageUrl: string): Promise<string | null> {
-  try {
-    const response = await fetch(imageUrl, {
-      headers: {
-        "User-Agent": USER_AGENT,
-      },
-    });
-
-    if (!response.ok) return null;
-
-    const contentType = response.headers.get("content-type") || "image/jpeg";
-    const buffer = await response.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString("base64");
-
-    return `data:${contentType};base64,${base64}`;
+    const track = data.data[0];
+    return track?.album?.cover_big || track?.album?.cover_medium || null;
   } catch {
     return null;
   }
 }
 
 /**
- * Fetches album cover art using MusicBrainz + Cover Art Archive
- * Returns a base64 data URL or null if not found
+ * Fetches album cover art using Deezer API
+ * Returns a cover URL or null if not found
  */
 export async function fetchCoverArt(
   artist: string,
-  album?: string,
+  _album?: string,
   title?: string
 ): Promise<string | null> {
-  if (!artist) return null;
+  if (!artist || !title) return null;
 
-  const cacheKey = getCacheKey(artist, album || "", title || "");
+  const cacheKey = getCacheKey(artist, title);
   const cached = getFromCache(cacheKey);
 
   if (cached !== undefined) {
@@ -166,25 +103,9 @@ export async function fetchCoverArt(
   }
 
   try {
-    // Step 1: Search MusicBrainz for the release
-    const mbid = await searchMusicBrainz(artist, album, title);
-    if (!mbid) {
-      setCache(cacheKey, null);
-      return null;
-    }
-
-    // Step 2: Fetch cover from Cover Art Archive
-    const coverUrl = await fetchCoverFromArchive(mbid);
-    if (!coverUrl) {
-      setCache(cacheKey, null);
-      return null;
-    }
-
-    // Step 3: Download and convert to base64
-    const base64Cover = await fetchImageAsBase64(coverUrl);
-    setCache(cacheKey, base64Cover);
-
-    return base64Cover;
+    const coverUrl = await searchDeezer(artist, title);
+    setCache(cacheKey, coverUrl);
+    return coverUrl;
   } catch {
     setCache(cacheKey, null);
     return null;

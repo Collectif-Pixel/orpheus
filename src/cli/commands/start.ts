@@ -43,6 +43,8 @@ export const startCommand = defineCommand({
     if (args.foreground) {
       ui.spinner("Starting Orpheus...");
       try {
+        ensureConfigDir();
+        writePid(process.pid);
         await startServer(port);
       } catch (error) {
         handleStartError(error, port);
