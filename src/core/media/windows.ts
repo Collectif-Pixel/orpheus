@@ -1,6 +1,7 @@
 import { spawn, type Subprocess } from "bun";
 import { MediaDetector } from "./index";
 import type { NowPlayingData } from "../types";
+import { fetchCoverArt } from "./cover-fallback";
 
 function detectImageMimeType(base64Data: string): string {
   try {
@@ -161,18 +162,32 @@ export class WindowsMediaDetector extends MediaDetector {
     }
   }
 
-  private processLine(line: string): void {
+  private async processLine(line: string): Promise<void> {
     try {
       const data = JSON.parse(line);
 
       if (!data.title) return;
+
+      let coverUrl: string | undefined;
+
+      if (data.artwork) {
+        coverUrl = `data:${detectImageMimeType(data.artwork)};base64,${data.artwork}`;
+      } else {
+        // Fallback to MusicBrainz Cover Art Archive
+        const fallbackCover = await fetchCoverArt(
+          data.artist,
+          data.album,
+          data.title
+        );
+        coverUrl = fallbackCover || undefined;
+      }
 
       const track: NowPlayingData = {
         title: data.title || "Unknown Title",
         artist: data.artist || "Unknown Artist",
         album: data.album || undefined,
         playing: data.playing ?? true,
-        coverUrl: data.artwork ? `data:${detectImageMimeType(data.artwork)};base64,${data.artwork}` : undefined,
+        coverUrl,
       };
 
       if (this.hasTrackChanged(track)) {
@@ -205,6 +220,20 @@ export class WindowsMediaDetector extends MediaDetector {
 
       if (!data.title) return null;
 
+      let coverUrl: string | undefined;
+
+      if (data.artworkData) {
+        coverUrl = `data:${detectImageMimeType(data.artworkData)};base64,${data.artworkData}`;
+      } else {
+        // Fallback to MusicBrainz Cover Art Archive
+        const fallbackCover = await fetchCoverArt(
+          data.artist,
+          data.album,
+          data.title
+        );
+        coverUrl = fallbackCover || undefined;
+      }
+
       const track: NowPlayingData = {
         title: data.title || "Unknown Title",
         artist: data.artist || "Unknown Artist",
@@ -212,9 +241,7 @@ export class WindowsMediaDetector extends MediaDetector {
         playing: data.playing ?? true,
         duration: data.duration || undefined,
         elapsedTime: data.elapsedTime || undefined,
-        coverUrl: data.artworkData
-          ? `data:${detectImageMimeType(data.artworkData)};base64,${data.artworkData}`
-          : undefined,
+        coverUrl,
       };
 
       this.currentTrack = track;
