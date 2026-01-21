@@ -54,29 +54,71 @@ export const startCommand = defineCommand({
         ensureConfigDir();
         const logPath = getLogFilePath();
 
-        const child = spawn({
-          cmd: [process.execPath, "start", "--foreground", "--port", port.toString()],
-          stdout: "ignore",
-          stderr: "ignore",
-          stdin: "ignore",
-        });
+        if (process.platform === "win32") {
+          // Use PowerShell to create a truly detached process on Windows
+          const psScript = `
+            $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+            $pinfo.FileName = "${process.execPath.replace(/\\/g, "\\\\")}"
+            $pinfo.Arguments = "start --foreground --port ${port}"
+            $pinfo.CreateNoWindow = $true
+            $pinfo.UseShellExecute = $false
+            $p = New-Object System.Diagnostics.Process
+            $p.StartInfo = $pinfo
+            $p.Start() | Out-Null
+            Write-Output $p.Id
+          `;
 
-        await $`echo "=== Orpheus started at $(date) ===" >> ${logPath}`.quiet();
-        await new Promise((resolve) => setTimeout(resolve, DAEMON_START_DELAY_MS));
+          const proc = spawn({
+            cmd: ["powershell", "-NoProfile", "-Command", psScript],
+            stdout: "pipe",
+          });
 
-        if (child.exitCode !== null) {
-          ui.log.error("Failed to start daemon");
-          process.exit(1);
+          const output = await new Response(proc.stdout).text();
+          await proc.exited;
+          const pid = parseInt(output.trim(), 10);
+
+          await new Promise((resolve) => setTimeout(resolve, DAEMON_START_DELAY_MS));
+
+          try {
+            await fetch(`http://localhost:${port}/api/status`, { signal: AbortSignal.timeout(2000) });
+          } catch {
+            ui.log.error("Failed to start daemon");
+            process.exit(1);
+          }
+
+          writePid(pid);
+
+          ui.br();
+          ui.log.success(`Orpheus started ${ui.dim(`(PID: ${pid})`)}`);
+          ui.log.info(`Server ${ui.primary(`http://localhost:${port}`)}`);
+          ui.log.info(`Logs ${ui.dim(logPath)}`);
+          ui.br();
+        } else {
+          // Unix: spawn + unref works correctly
+          const child = spawn({
+            cmd: [process.execPath, "start", "--foreground", "--port", port.toString()],
+            stdout: "ignore",
+            stderr: "ignore",
+            stdin: "ignore",
+          });
+
+          await $`echo "=== Orpheus started at $(date) ===" >> ${logPath}`.quiet();
+          await new Promise((resolve) => setTimeout(resolve, DAEMON_START_DELAY_MS));
+
+          if (child.exitCode !== null) {
+            ui.log.error("Failed to start daemon");
+            process.exit(1);
+          }
+
+          writePid(child.pid);
+          child.unref();
+
+          ui.br();
+          ui.log.success(`Orpheus started ${ui.dim(`(PID: ${child.pid})`)}`);
+          ui.log.info(`Server ${ui.primary(`http://localhost:${port}`)}`);
+          ui.log.info(`Logs ${ui.dim(logPath)}`);
+          ui.br();
         }
-
-        writePid(child.pid);
-        child.unref();
-
-        ui.br();
-        ui.log.success(`Orpheus started ${ui.dim(`(PID: ${child.pid})`)}`);
-        ui.log.info(`Server ${ui.primary(`http://localhost:${port}`)}`);
-        ui.log.info(`Logs ${ui.dim(logPath)}`);
-        ui.br();
       } catch (error) {
         handleStartError(error, port);
       }
