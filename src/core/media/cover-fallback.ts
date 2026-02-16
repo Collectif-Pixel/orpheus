@@ -26,6 +26,7 @@ interface DeezerSearchResult {
 // Simple in-memory cache to avoid repeated API calls
 const coverCache = new Map<string, string | null>();
 const CACHE_TTL = 1000 * 60 * 30; // 30 minutes
+const CACHE_MAX_SIZE = 200;
 const cacheTimestamps = new Map<string, number>();
 
 function getCacheKey(artist: string, title: string): string {
@@ -43,6 +44,14 @@ function getFromCache(key: string): string | null | undefined {
 }
 
 function setCache(key: string, value: string | null): void {
+  // Evict oldest entries when cache exceeds max size
+  if (coverCache.size >= CACHE_MAX_SIZE) {
+    const oldest = [...cacheTimestamps.entries()].sort((a, b) => a[1] - b[1])[0];
+    if (oldest) {
+      coverCache.delete(oldest[0]);
+      cacheTimestamps.delete(oldest[0]);
+    }
+  }
   coverCache.set(key, value);
   cacheTimestamps.set(key, Date.now());
 }
