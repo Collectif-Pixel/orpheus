@@ -1,6 +1,7 @@
 import { spawn, type Subprocess } from "bun";
 import { MediaDetector } from "./index";
 import type { NowPlayingData } from "../types";
+import { fetchCoverArt } from "./cover-fallback";
 
 const POLL_INTERVAL_MS = 500;
 
@@ -109,22 +110,13 @@ export class LinuxMediaDetector extends MediaDetector {
         this.emitTrack(track);
       }
 
-      if (artUrl) {
-        const currentTitle = track.title;
-        const currentArtist = track.artist;
+      const currentTitle = track.title;
+      const currentArtist = track.artist;
+      const coverUrl = await this.resolveArtwork(artUrl, currentArtist, currentTitle);
 
-        if (artUrl.startsWith("file://")) {
-          const coverUrl = await this.loadArtworkFromFile(artUrl);
-          if (coverUrl && this.currentTrack?.title === currentTitle && this.currentTrack?.artist === currentArtist) {
-            this.currentTrack.coverUrl = coverUrl;
-            this.emit("track", this.currentTrack);
-          }
-        } else if (artUrl.startsWith("http://") || artUrl.startsWith("https://")) {
-          if (this.currentTrack && this.currentTrack.coverUrl !== artUrl) {
-            this.currentTrack.coverUrl = artUrl;
-            this.emit("track", this.currentTrack);
-          }
-        }
+      if (coverUrl && this.currentTrack?.title === currentTitle && this.currentTrack?.artist === currentArtist && this.currentTrack.coverUrl !== coverUrl) {
+        this.currentTrack.coverUrl = coverUrl;
+        this.emit("track", this.currentTrack);
       }
     } catch (error) {
       this.emit("error", error);
@@ -152,6 +144,19 @@ export class LinuxMediaDetector extends MediaDetector {
       this.emit("error", error);
     }
     return null;
+  }
+
+  private async resolveArtwork(artUrl: string | undefined, artist: string, title: string): Promise<string | null> {
+    if (artUrl) {
+      if (artUrl.startsWith("file://")) {
+        return this.loadArtworkFromFile(artUrl);
+      }
+      if (artUrl.startsWith("http://") || artUrl.startsWith("https://")) {
+        return artUrl;
+      }
+    }
+    // Fallback to Deezer when no local artwork is available
+    return fetchCoverArt(artist, undefined, title);
   }
 
   private parsePlayerctlData(data: {
@@ -194,30 +199,9 @@ export class LinuxMediaDetector extends MediaDetector {
       const data = JSON.parse(output.trim());
       const track = this.parsePlayerctlData(data);
       const artUrl = data.artUrl?.trim();
-      if (artUrl) {
-        if (artUrl.startsWith("file://")) {
-          try {
-            const filePath = artUrl.replace(/^file:\/\//, "");
-            const file = Bun.file(filePath);
-            if (await file.exists()) {
-              const buffer = await file.arrayBuffer();
-              const base64 = Buffer.from(buffer).toString("base64");
-              const ext = filePath.split(".").pop()?.toLowerCase();
-              const mimeTypes: Record<string, string> = {
-                png: "image/png",
-                jpg: "image/jpeg",
-                jpeg: "image/jpeg",
-                gif: "image/gif",
-                webp: "image/webp",
-              };
-              track.coverUrl = `data:${mimeTypes[ext || ""] || "image/jpeg"};base64,${base64}`;
-            }
-          } catch (error) {
-            this.emit("error", error);
-          }
-        } else if (artUrl.startsWith("http://") || artUrl.startsWith("https://")) {
-          track.coverUrl = artUrl;
-        }
+      const coverUrl = await this.resolveArtwork(artUrl, track.artist, track.title);
+      if (coverUrl) {
+        track.coverUrl = coverUrl;
       }
 
       this.currentTrack = track;

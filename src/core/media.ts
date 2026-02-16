@@ -30,7 +30,11 @@ export const mediaDetector = {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: string, listener: (...args: any[]) => void) {
-    getInstance().then((detector) => detector.on(event, listener));
+    if (instance) {
+      instance.on(event, listener);
+    } else {
+      getInstance().then((detector) => detector.on(event, listener));
+    }
     return this;
   },
 

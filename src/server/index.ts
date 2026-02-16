@@ -19,6 +19,9 @@ function broadcast(data: NowPlayingData): void {
 }
 
 mediaDetector.on("track", (track: NowPlayingData) => broadcast(track));
+mediaDetector.on("error", (error: Error) => {
+  logger.error(`Media detection error: ${error.message}`);
+});
 
 function corsHeaders(): Record<string, string> {
   return {
@@ -112,6 +115,10 @@ let port = 4242;
 
 function gracefulShutdown(): void {
   logger.shutdown();
+  // Force exit after 5 seconds if graceful shutdown hangs
+  const forceTimeout = setTimeout(() => process.exit(1), 5000);
+  forceTimeout.unref?.();
+
   for (const writer of sseClients) {
     writer.close().catch(() => {});
   }
