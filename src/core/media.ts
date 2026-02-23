@@ -1,12 +1,25 @@
 import { getMediaDetector, type MediaDetector } from "./media/index";
 
 let instance: MediaDetector | null = null;
+let instancePromise: Promise<MediaDetector> | null = null;
+
+// Queue listeners registered before the instance is ready
+const pendingListeners: Array<{ event: string; listener: (...args: any[]) => void }> = [];
 
 async function getInstance(): Promise<MediaDetector> {
-  if (!instance) {
-    instance = await getMediaDetector();
+  if (instance) return instance;
+  if (!instancePromise) {
+    instancePromise = getMediaDetector().then((detector) => {
+      instance = detector;
+      // Flush any listeners that were queued before initialization
+      for (const { event, listener } of pendingListeners) {
+        instance.on(event, listener);
+      }
+      pendingListeners.length = 0;
+      return detector;
+    });
   }
-  return instance;
+  return instancePromise;
 }
 
 export const mediaDetector = {
@@ -28,13 +41,18 @@ export const mediaDetector = {
     return instance?.getCurrentTrack() ?? null;
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: string, listener: (...args: any[]) => void) {
-    getInstance().then((detector) => detector.on(event, listener));
+    if (instance) {
+      instance.on(event, listener);
+    } else {
+      // Queue the listener — it will be flushed when getInstance() resolves
+      pendingListeners.push({ event, listener });
+      // Kick off initialization if not already started
+      getInstance();
+    }
     return this;
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   off(event: string, listener: (...args: any[]) => void) {
     instance?.off(event, listener);
     return this;

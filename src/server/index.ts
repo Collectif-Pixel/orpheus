@@ -1,5 +1,5 @@
 import { join } from "path";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, statSync } from "fs";
 import { mediaDetector } from "../core/media";
 import { loadConfig, getThemesDir } from "../core/config";
 import { cleanupPid } from "../core/daemon";
@@ -11,6 +11,8 @@ import type { NowPlayingData } from "../core/types";
 const sseClients = new Set<WritableStreamDefaultWriter<Uint8Array>>();
 const encoder = new TextEncoder();
 
+const SSE_RECONNECT_MS = 2000;
+
 function broadcast(data: NowPlayingData): void {
   const message = encoder.encode(`event: track\ndata: ${JSON.stringify(data)}\n\n`);
   for (const writer of sseClients) {
@@ -19,6 +21,9 @@ function broadcast(data: NowPlayingData): void {
 }
 
 mediaDetector.on("track", (track: NowPlayingData) => broadcast(track));
+mediaDetector.on("error", (error: Error) => {
+  logger.error(`Media detection error: ${error.message}`);
+});
 
 function corsHeaders(): Record<string, string> {
   return {
@@ -26,6 +31,28 @@ function corsHeaders(): Record<string, string> {
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };
+}
+
+// In-memory cache for custom theme files
+const themeCache = new Map<string, { content: string; mtime: number }>();
+
+function loadThemeFile(themePath: string): string | null {
+  if (!existsSync(themePath)) return null;
+
+  try {
+    const mtime = statSync(themePath).mtimeMs;
+    const cached = themeCache.get(themePath);
+
+    if (cached && cached.mtime === mtime) {
+      return cached.content;
+    }
+
+    const content = readFileSync(themePath, "utf-8");
+    themeCache.set(themePath, { content, mtime });
+    return content;
+  } catch {
+    return null;
+  }
 }
 
 async function handleRequest(req: Request): Promise<Response> {
@@ -50,6 +77,9 @@ async function handleRequest(req: Request): Promise<Response> {
     const writer = writable.getWriter();
 
     sseClients.add(writer);
+
+    // Send retry hint so the browser handles reconnection natively
+    writer.write(encoder.encode(`retry: ${SSE_RECONNECT_MS}\n\n`));
 
     const current = mediaDetector.getCurrentTrack();
     if (current) {
@@ -91,11 +121,13 @@ async function handleRequest(req: Request): Promise<Response> {
     }
 
     const themePath = join(getThemesDir(), themeName, "theme.html");
-    if (!existsSync(themePath)) {
+    const content = loadThemeFile(themePath);
+
+    if (!content) {
       return new Response(`Theme "${themeName}" not found`, { status: 404 });
     }
 
-    return new Response(readFileSync(themePath, "utf-8"), {
+    return new Response(content, {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   }
@@ -112,6 +144,10 @@ let port = 4242;
 
 function gracefulShutdown(): void {
   logger.shutdown();
+  // Force exit after 5 seconds if graceful shutdown hangs
+  const forceTimeout = setTimeout(() => process.exit(1), 5000);
+  forceTimeout.unref?.();
+
   for (const writer of sseClients) {
     writer.close().catch(() => {});
   }
@@ -121,29 +157,8 @@ function gracefulShutdown(): void {
   process.exit(0);
 }
 
-async function checkPortAvailable(portToCheck: number): Promise<boolean> {
-  try {
-    const server = Bun.serve({
-      port: portToCheck,
-      fetch: () => new Response(""),
-    });
-    server.stop(true);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export async function startServer(serverPort: number): Promise<void> {
   port = serverPort;
-
-  // Check port availability before starting
-  const portAvailable = await checkPortAvailable(port);
-  if (!portAvailable) {
-    const error = new Error(`Port ${port} is already in use`) as NodeJS.ErrnoException;
-    error.code = "EADDRINUSE";
-    throw error;
-  }
 
   process.on("SIGTERM", gracefulShutdown);
   process.on("SIGINT", gracefulShutdown);
@@ -151,11 +166,20 @@ export async function startServer(serverPort: number): Promise<void> {
   await mediaDetector.start();
   await mediaDetector.getNowPlaying();
 
-  Bun.serve({
-    port,
-    fetch: handleRequest,
-    idleTimeout: 0,
-  });
+  try {
+    Bun.serve({
+      port,
+      fetch: handleRequest,
+      idleTimeout: 0,
+    });
+  } catch (err: any) {
+    if (err?.code === "EADDRINUSE" || err?.message?.includes("address already in use")) {
+      const error = new Error(`Port ${port} is already in use`) as NodeJS.ErrnoException;
+      error.code = "EADDRINUSE";
+      throw error;
+    }
+    throw err;
+  }
 
   logger.server(port);
 }

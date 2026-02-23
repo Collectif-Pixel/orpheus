@@ -146,11 +146,8 @@ export const defaultTheme = `<!DOCTYPE html>
 
       eventSource.addEventListener('ping', () => {});
 
-      eventSource.onerror = () => {
-        console.log('SSE connection lost, reconnecting...');
-        eventSource.close();
-        setTimeout(connectSSE, 2000);
-      };
+      // Reconnection is handled natively by EventSource using the
+      // server-sent retry: hint — no manual reconnect needed.
     }
 
     fetch('/api/now-playing')
