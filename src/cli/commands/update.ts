@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
-import { $ } from "bun";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, rmSync } from "fs";
 import { join } from "path";
+import { execSync } from "child_process";
 import { getThemesDir, loadConfig, saveConfig } from "../../core/config";
 import { ui } from "../ui";
 
@@ -69,8 +69,8 @@ async function updateTheme(themeName: string, config: ReturnType<typeof loadConf
   const repoUrl = `https://github.com/${scope}/${name}.git`;
 
   try {
-    await $`rm -rf ${themeDir}`.quiet();
-    await $`git clone --depth 1 ${repoUrl} ${themeDir}`.quiet();
+    rmSync(themeDir, { recursive: true, force: true });
+    execSync(`git clone --depth 1 ${repoUrl} "${themeDir}"`, { stdio: "ignore" });
   } catch {
     ui.log.error(`Failed to update ${themeName}`);
     return;
@@ -79,7 +79,7 @@ async function updateTheme(themeName: string, config: ReturnType<typeof loadConf
   const themeHtml = join(themeDir, "theme.html");
   if (!existsSync(themeHtml)) {
     ui.log.error(`Invalid theme: theme.html not found`);
-    await $`rm -rf ${themeDir}`.quiet();
+    rmSync(themeDir, { recursive: true, force: true });
     return;
   }
 
@@ -92,7 +92,7 @@ async function updateTheme(themeName: string, config: ReturnType<typeof loadConf
     } catch {}
   }
 
-  await $`rm -rf ${join(themeDir, ".git")}`.quiet();
+  rmSync(join(themeDir, ".git"), { recursive: true, force: true });
 
   config.themes[themeName] = {
     repo: `github:${scope}/${name}`,

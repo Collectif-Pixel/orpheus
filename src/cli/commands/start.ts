@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
-import { spawn, $ } from "bun";
+import { spawn } from "bun";
+import { appendFileSync } from "fs";
 import { startServer } from "../../server";
 import { loadConfig, ensureConfigDir } from "../../core/config";
 import { isDaemonRunning, writePid, getLogFilePath } from "../../core/daemon";
@@ -104,7 +105,7 @@ export const startCommand = defineCommand({
             stdin: "ignore",
           });
 
-          await $`echo "=== Orpheus started at $(date) ===" >> ${logPath}`.quiet();
+          appendFileSync(logPath, `=== Orpheus started at ${new Date().toISOString()} ===\n`);
           await new Promise((resolve) => setTimeout(resolve, DAEMON_START_DELAY_MS));
 
           if (child.exitCode !== null) {

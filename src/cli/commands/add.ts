@@ -1,7 +1,7 @@
 import { defineCommand } from "citty";
-import { $ } from "bun";
-import { existsSync, mkdirSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "fs";
 import { join } from "path";
+import { execSync } from "child_process";
 import { getThemesDir, loadConfig, saveConfig } from "../../core/config";
 import { ui } from "../ui";
 
@@ -50,7 +50,7 @@ export const addCommand = defineCommand({
     ui.spinner(`Installing ${ui.primary(themeName)}...`);
 
     try {
-      await $`git clone --depth 1 ${repoUrl} ${themeDir}`.quiet();
+      execSync(`git clone --depth 1 ${repoUrl} "${themeDir}"`, { stdio: "ignore" });
     } catch {
       ui.log.error(`Failed to clone: ${repoUrl}`);
       ui.log.info("Make sure the repository exists and is public");
@@ -60,7 +60,7 @@ export const addCommand = defineCommand({
     const themeHtml = join(themeDir, "theme.html");
     if (!existsSync(themeHtml)) {
       ui.log.error("Invalid theme: theme.html not found");
-      await $`rm -rf ${themeDir}`.quiet();
+      rmSync(themeDir, { recursive: true, force: true });
       process.exit(1);
     }
 
@@ -81,7 +81,7 @@ export const addCommand = defineCommand({
       }
     }
 
-    await $`rm -rf ${join(themeDir, ".git")}`.quiet();
+    rmSync(join(themeDir, ".git"), { recursive: true, force: true });
 
     const config = loadConfig();
     config.themes[themeName] = {
