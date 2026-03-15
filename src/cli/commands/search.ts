@@ -1,9 +1,9 @@
 import { defineCommand } from "citty";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
-import { $ } from "bun";
-import { existsSync, mkdirSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "fs";
 import { join } from "path";
+import { execSync } from "child_process";
 import { getThemesDir, loadConfig, saveConfig } from "../../core/config";
 
 const REGISTRY_URL = "https://raw.githubusercontent.com/Collectif-Pixel/orpheus-themes/main/registry.json";
@@ -107,7 +107,7 @@ export const searchCommand = defineCommand({
       s.start(action === "install" ? "Installing..." : "Updating...");
 
       if (existsSync(themeDir)) {
-        await $`rm -rf ${themeDir}`.quiet();
+        rmSync(themeDir, { recursive: true, force: true });
       }
 
       if (!existsSync(scopeDir)) {
@@ -117,8 +117,8 @@ export const searchCommand = defineCommand({
       const repoUrl = `https://github.com/${scope}/${name}.git`;
 
       try {
-        await $`git clone --depth 1 ${repoUrl} ${themeDir}`.quiet();
-        await $`rm -rf ${join(themeDir, ".git")}`.quiet();
+        execSync(`git clone --depth 1 ${repoUrl} "${themeDir}"`, { stdio: "ignore" });
+        rmSync(join(themeDir, ".git"), { recursive: true, force: true });
 
         let version = "unknown";
         const packageJsonPath = join(themeDir, "package.json");
@@ -167,7 +167,7 @@ export const searchCommand = defineCommand({
       s.start("Removing...");
 
       try {
-        await $`rm -rf ${themeDir}`.quiet();
+        rmSync(themeDir, { recursive: true, force: true });
         delete config.themes[selectedTheme.name];
 
         if (config.currentTheme === selectedTheme.name) {

@@ -1,6 +1,5 @@
 import { defineCommand } from "citty";
-import { $ } from "bun";
-import { existsSync, readdirSync, rmdirSync } from "fs";
+import { existsSync, readdirSync, rmdirSync, rmSync } from "fs";
 import { join, dirname } from "path";
 import { getThemesDir, loadConfig, saveConfig } from "../../core/config";
 import { ui } from "../ui";
@@ -48,7 +47,7 @@ export const removeCommand = defineCommand({
     ui.spinner(`Removing ${themeName}...`);
 
     try {
-      await $`rm -rf ${themeDir}`.quiet();
+      rmSync(themeDir, { recursive: true, force: true });
     } catch (error) {
       ui.log.error(`Failed: ${(error as Error).message}`);
       process.exit(1);
